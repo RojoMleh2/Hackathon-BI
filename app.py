@@ -5,7 +5,7 @@ sns.set_theme(style="darkgrid")
 import matplotlib.pyplot as plt
 
 # Configuration du tableau de bord
-st.set_page_config(page_title="Tableau de bord RH - Pilotage du Turnover", layout="wide")
+st.set_page_config(page_title="Dashboard - Hackathon BI", layout="wide")
 
 # Titre principal
-st.title("Tableau de Bord RH : Pilotage du Turnover")
+st.title("Management & Data science - Analyse performances marketing")
