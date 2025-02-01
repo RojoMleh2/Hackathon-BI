@@ -13,7 +13,7 @@ def load_data():
     df = pd.read_csv(file_path, parse_dates=["timestamp"])
     df.columns = df.columns.str.strip()  # Nettoyer les noms de colonnes
     
-    # Vérifier si les colonnes nécessaires sont présentes
+    # Vérifier la présence des colonnes nécessaires
     required_columns = [
         'session_id', 'visitor_id', 'is_repeat_visitor', 'is_new_visitor',
         'numeric_value', 'days_since_prior_session', 'days_since_first_session',
@@ -23,7 +23,7 @@ def load_data():
     missing_columns = [col for col in required_columns if col not in df.columns]
     
     if not missing_columns:
-        # Définir les poids des actions
+        # Définition des poids pour le calcul du score d'engagement
         action_weights = {
             'frontend submit': 5,
             'frontend modify': 3,
@@ -32,7 +32,6 @@ def load_data():
             'view': 2
         }
 
-        # Ajouter une colonne de score en fonction des actions
         df['action_score'] = df['action_name'].map(action_weights).fillna(1)
         df['group_score'] = df['action_group'].apply(lambda x: 4 if x == 'publish' else 2)
 
@@ -50,7 +49,7 @@ def load_data():
             unique_groups=('action_group', 'nunique')
         ).reset_index()
 
-        # S'assurer que certaines valeurs restent positives
+        # Assurer que certaines valeurs restent positives
         df_grouped['avg_days_since_first_session'] = df_grouped['avg_days_since_first_session'].apply(lambda x: max(x, 1))
 
         # Calcul du score d'engagement
@@ -70,7 +69,6 @@ def load_data():
         df_grouped['engagement_score'] = (df_grouped['engagement_score'] - df_grouped['engagement_score'].min()) / (
             df_grouped['engagement_score'].max() - df_grouped['engagement_score'].min()) * 100
 
-        # Fusionner avec le dataset principal
         df = df.merge(df_grouped[['visitor_id', 'engagement_score']], on='visitor_id', how='left')
 
     return df
@@ -85,7 +83,6 @@ min_date = df["timestamp"].min().date()
 max_date = df["timestamp"].max().date()
 start_date, end_date = st.sidebar.date_input("📆 Période :", [min_date, max_date], min_value=min_date, max_value=max_date)
 
-# 🎯 Filtrage des données par date
 filtered_df = df[(df["timestamp"].dt.date >= start_date) & (df["timestamp"].dt.date <= end_date)]
 
 # 🔗 Canaux d'acquisition
@@ -97,7 +94,6 @@ source_selected = st.sidebar.multiselect("🔗 Source", df["source_name"].dropna
 # 👥 Type de visiteur
 visitor_type = st.sidebar.radio("👥 Type de visiteur", ["Tous", "Nouveau", "Récurrent"])
 
-# Appliquer les filtres
 filtered_df = filtered_df[
     (filtered_df["medium"].isin(medium_selected)) & 
     (filtered_df["source_name"].isin(source_selected))
@@ -109,7 +105,7 @@ elif visitor_type == "Récurrent":
     filtered_df = filtered_df[filtered_df["is_repeat_visitor"] == 1]
 
 # === CREATION DES ONGLETS ===
-tabs = st.tabs(["🏠 Accueil", "📊 Score d'Engagement"])
+tabs = st.tabs(["🏠 Accueil", "📥 Acquisition", "🎭 Engagement", "🎯 Conversion & Rétention", "📊 Score d'Engagement", "🕒 Analyse Temporelle"])
 
 # === 🏠 ACCUEIL (KPI GLOBAUX) ===
 with tabs[0]:
@@ -120,14 +116,8 @@ with tabs[0]:
     col2.metric("🧑‍💻 Visiteurs Uniques", f"{filtered_df['visitor_id'].nunique():,}")
     col3.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
 
-    if 'engagement_score' in filtered_df.columns:
-        col4, col5 = st.columns(2)
-        col4.metric("🔥 Score d’Engagement Moyen", f"{filtered_df['engagement_score'].mean():.2f}")
-    else:
-        st.warning("Le score d'engagement n'a pas pu être calculé.")
-
 # === 📊 SCORE D’ENGAGEMENT (ISOLÉ) ===
-with tabs[1]:
+with tabs[4]:
     st.markdown("## 📊 Score d’Engagement des Visiteurs")
 
     if 'engagement_score' in filtered_df.columns:
@@ -136,6 +126,11 @@ with tabs[1]:
                                     title="Engagement Score des Visiteurs",
                                     color_continuous_scale=[[0, "blue"], [1, "red"]])
         st.plotly_chart(fig_engagement, use_container_width=True)
-    else:
-        st.warning("Impossible d'afficher le score d'engagement.")
+
+# === 🕒 ANALYSE TEMPORELLE ===
+with tabs[5]:
+    st.markdown("## 🕒 Analyse Temporelle")
+
+    fig_sessions_time = px.line(filtered_df.groupby("timestamp")["session_id"].count().reset_index(), x="timestamp", y="session_id", title="📅 Sessions par Jour")
+    st.plotly_chart(fig_sessions_time, use_container_width=True)
 
