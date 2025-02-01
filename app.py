@@ -9,12 +9,12 @@ st.set_page_config(page_title="📊 Tableau de Bord Web Analytics", layout="wide
 # === CHARGEMENT DES DONNÉES ===
 @st.cache_data
 def load_data():
-    file_path = "owa_action_fact2.csv"  
+    file_path = "owa_action_fact2.csv"
     df = pd.read_csv(file_path, parse_dates=["timestamp"])
-    
+
     # Nettoyer les noms de colonnes (évite les erreurs de KeyError)
     df.columns = df.columns.str.strip()
-    
+
     return df
 
 df = load_data()
@@ -66,7 +66,7 @@ col3.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*10
 # 📌 Répartition Nouveaux vs. Récurrents
 visitor_dist = filtered_df["is_new_visitor"].value_counts(normalize=True) * 100
 fig_pie = px.pie(
-    names=["Nouveaux Visiteurs", "Visiteurs Récurrents"], 
+    names=["Nouveaux Visiteurs", "Visiteurs Récurrents"],
     values=[visitor_dist.get(1, 0), visitor_dist.get(0, 0)],
     title="📌 Répartition Nouveaux vs. Récurrents"
 )
@@ -128,6 +128,95 @@ st.plotly_chart(fig_sessions_time, use_container_width=True)
 # 📊 Meilleurs jours pour l’engagement
 fig_dayofweek = px.bar(filtered_df.groupby("dayofweek")["session_id"].count(), title="📊 Meilleurs Jours pour l'Engagement")
 st.plotly_chart(fig_dayofweek, use_container_width=True)
+
+# Score d'engagement
+
+# Calculer le score d'implication en regroupant par visitor_id
+df['session_duration'] = df['last_req'] - df['timestamp']
+
+action_weights = {
+    'frontend submit': 5,
+    'frontend modify': 3,
+    'editor publish': 7,
+    'frontend create': 8,
+    'view': 2  # Exemple de poids augmentés
+}
+df['action_score'] = df['action_name'].map(action_weights).fillna(1)
+df['group_score'] = df['action_group'].apply(lambda x: 4 if x == 'publish' else 2)
+
+# Agrégation des données par visiteur
+df_grouped = df.groupby('visitor_id').agg(
+    num_sessions=('session_id', 'nunique'),
+    repeat_visitor=('is_repeat_visitor', 'max'),
+    new_visitor=('is_new_visitor', 'max'),
+    total_numeric_value=('numeric_value', 'sum'),
+    avg_days_since_prior_session=('days_since_prior_session', 'mean'),
+    avg_days_since_first_session=('days_since_first_session', 'mean'),
+    total_session_duration=('session_duration', 'sum'),
+    total_action_score=('action_score', 'sum'),
+    total_group_score=('group_score', 'sum'),
+    unique_actions=('action_name', 'nunique'),
+    unique_groups=('action_group', 'nunique')
+).reset_index()
+
+# S'assurer que certaines valeurs restent positives
+df_grouped['avg_days_since_first_session'] = df_grouped['avg_days_since_first_session'].apply(lambda x: max(x, 1))
+df_grouped['total_session_duration'] = df_grouped['total_session_duration'].apply(lambda x: max(x, 1))
+
+# Normalisation du score d'implication
+df_grouped['engagement_score'] = (
+    df_grouped['num_sessions'] * 5 +
+    df_grouped['repeat_visitor'] * 6 - df_grouped['new_visitor'] * 2 +
+    df_grouped['total_numeric_value'] * 3 +
+    (30 / (df_grouped['avg_days_since_prior_session'] + 1)) +
+    (50 / (df_grouped['avg_days_since_first_session'] + 1)) +
+    (df_grouped['total_session_duration'] / 30) +
+    df_grouped['total_action_score'] * 2 +
+    df_grouped['total_group_score'] * 3 +
+    df_grouped['unique_actions'] * 4 +
+    df_grouped['unique_groups'] * 5
+)
+
+# Mise à l'échelle entre 0 et 100
+df_grouped['engagement_score'] = (df_grouped['engagement_score'] - df_grouped['engagement_score'].min()) / (
+    df_grouped['engagement_score'].max() - df_grouped['engagement_score'].min()) * 100
+
+# Supprimer les utilisateurs avec un score d'implication de 0
+df_grouped = df_grouped[df_grouped['engagement_score'] > 0]
+
+# Filtrer pour ne conserver que les scores inférieurs ou égaux à 20
+df_grouped = df_grouped[df_grouped['engagement_score'] <= 20]
+
+# Trouver l'utilisateur avec le score le plus élevé
+best_visitor = df_grouped.loc[df_grouped['engagement_score'].idxmax(), 'visitor_id']
+best_score = df_grouped['engagement_score'].max()
+
+# Streamlit App
+st.title("Tableau de Bord d'Implication des Visiteurs")
+
+# Afficher les KPIs
+st.subheader("KPIs Clés")
+st.metric("Nombre total de visiteurs", df_grouped['visitor_id'].nunique())
+st.metric("Nombre total de sessions", df_grouped['num_sessions'].sum())
+st.metric("Score moyen d'engagement", round(df_grouped['engagement_score'].mean(), 2))
+st.metric("Nombre moyen d'actions uniques", round(df_grouped['unique_actions'].mean(), 2))
+st.metric("Nombre moyen de groupes uniques", round(df_grouped['unique_groups'].mean(), 2))
+st.metric("Meilleur visiteur", f"{best_visitor} avec un score de {round(best_score, 2)}")
+
+# Scatter Plot avec Plotly
+st.subheader("Scatter Plot : Score d'Implication des Visiteurs")
+fig = px.scatter(df_grouped, x='visitor_id', y='engagement_score',
+                 color='engagement_score',
+                 size='engagement_score',
+                 hover_data=['num_sessions', 'total_action_score', 'total_group_score'],
+                 title="Engagement Score des Visiteurs",
+                 color_continuous_scale=[[0, "blue"], [1, "red"]])
+fig.update_layout(yaxis=dict(range=[0, 20]))
+st.plotly_chart(fig)
+
+# Afficher le tableau des données utilisées
+st.subheader("Données Agrégées par Visiteur")
+st.dataframe(df_grouped)
 
 st.markdown("---")
 st.markdown("🚀 **Tableau de bord développé par IA** - Optimisé pour l’analyse de performances marketing web")
