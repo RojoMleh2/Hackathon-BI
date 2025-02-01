@@ -202,7 +202,7 @@ fig = px.scatter(df_grouped, x='visitor_id', y='engagement_score',
                  hover_data=['num_sessions', 'total_action_score', 'total_group_score'],
                  title="Engagement Score des Visiteurs",
                  color_continuous_scale=[[0, "blue"], [1, "red"]])
-fig.update_layout(yaxis=dict(range=[0, 20]))
+fig.update_layout(yaxis=dict(range=[0, 20]), xaxis=dict(visible=False))
 st.plotly_chart(fig)
 
 st.markdown("---")
