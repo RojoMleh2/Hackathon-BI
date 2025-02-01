@@ -19,12 +19,10 @@ st.markdown("Ce tableau de bord interactif vous permet d'explorer les performanc
 # ===============================
 @st.cache_data
 def load_data():
-    df_visitors = pd.read_csv("owa_visitor.csv")
-    df_actions = pd.read_csv("owa_action_fact.csv")
-    df_clicks = pd.read_csv("owa_click.csv")
-    return df_visitors, df_actions, df_clicks
+    df_merge = pd.read_csv("merged_visitor_data.csv")
+    return df_merge
 
-df_visitors, df_actions, df_clicks = load_data()
+df_merge = load_data()
 
 # ===============================
 # 📌 3. BARRE LATÉRALE AVEC FILTRES INTERACTIFS
@@ -32,16 +30,16 @@ df_visitors, df_actions, df_clicks = load_data()
 st.sidebar.header("🔍 Filtres Interactifs")
 
 # 📅 Filtrage par date
-min_date = df_actions["yyyymmdd"].min()
-max_date = df_actions["yyyymmdd"].max()
+min_date = df_merge["yyyymmdd"].min()
+max_date = df_merge["yyyymmdd"].max()
 date_filter = st.sidebar.slider("📅 Sélectionner une période :", min_date, max_date, (min_date, max_date))
 
 # 📍 Filtrage par type de visiteur
 visitor_type = st.sidebar.radio("👥 Type de Visiteur :", ["Tous", "Nouveaux", "Récurrents"])
 if visitor_type == "Nouveaux":
-    df_actions = df_actions[df_actions["is_new_visitor"] == 1]
+    df_actions = df_merge[df_merge["is_new_visitor"] == 1]
 elif visitor_type == "Récurrents":
-    df_actions = df_actions[df_actions["is_repeat_visitor"] == 1]
+    df_actions = df_merge[df_merge["is_repeat_visitor"] == 1]
 
 # 🌍 Filtrage par source d’acquisition
 source_list = df_actions["medium"].unique().tolist()
@@ -57,9 +55,9 @@ df_actions = df_actions[df_actions["medium"].isin(source_filter)]
 st.subheader("📊 Indicateurs Clés de Performance")
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("👥 Visiteurs Uniques", df_visitors["id"].nunique())
+col1.metric("👥 Visiteurs Uniques", df_merge["id"].nunique())
 col2.metric("📈 Sessions", df_actions["session_id"].nunique())
-col3.metric("💡 Taux de Clics (CTR)", f"{(df_clicks.shape[0] / df_actions.shape[0]) * 100:.2f} %")
+col3.metric("💡 Taux de Clics (CTR)", f"{(df_merge.shape[0] / df_actions.shape[0]) * 100:.2f} %")
 col4.metric("🕒 Temps Moyen par Session", f"{df_actions['last_req'].mean():.2f} sec")
 
 # ===============================
@@ -86,7 +84,7 @@ st.subheader("🖱️ Analyse des Clics")
 
 # Carte de chaleur des clics sur la page
 fig, ax = plt.subplots(figsize=(10, 5))
-sns.scatterplot(data=df_clicks, x="click_x", y="click_y", alpha=0.3)
+sns.scatterplot(data=df_merge, x="click_x", y="click_y", alpha=0.3)
 plt.title("Carte de Chaleur des Clics sur la Page")
 st.pyplot(fig)
 
