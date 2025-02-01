@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import datetime
 
 # === CONFIGURATION DE LA PAGE ===
 st.set_page_config(page_title="📊 Tableau de Bord SEO & Web Analytics", layout="wide")
@@ -114,16 +113,14 @@ with tabs[0]:
     st.metric("🧑‍💻 Visiteurs Uniques", f"{filtered_df['visitor_id'].nunique():,}")
     st.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
 
-# === 📥 ACQUISITION (Correction ici) ===
+# === 📥 ACQUISITION ===
 with tabs[1]:
     st.markdown("## 📥 Analyse du Trafic & Acquisition")
-    if not filtered_df.empty:
-        medium_counts = filtered_df["medium"].value_counts().reset_index()
-        medium_counts.columns = ["medium", "count"]
-        fig_medium = px.bar(medium_counts, x="medium", y="count", title="📊 Canaux d'Acquisition")
-        st.plotly_chart(fig_medium, use_container_width=True)
-    else:
-        st.warning("Aucune donnée disponible pour les canaux d'acquisition.")
+    medium_counts = filtered_df["medium"].value_counts().reset_index()
+    medium_counts.columns = ["medium", "count"]
+    fig_medium = px.bar(medium_counts, x="medium", y="count", title="📊 Canaux d'Acquisition")
+    st.plotly_chart(fig_medium, use_container_width=True)
+
 # === 🎭 ENGAGEMENT ===
 with tabs[2]:
     st.markdown("## 🎭 Engagement Utilisateur")
@@ -142,12 +139,8 @@ with tabs[4]:
     fig_engagement = px.scatter(filtered_df, x='visitor_id', y='engagement_score', color='engagement_score', size='engagement_score', title="Engagement Score des Visiteurs")
     st.plotly_chart(fig_engagement, use_container_width=True)
 
-
 # === 🕒 ANALYSE TEMPORELLE ===
 with tabs[5]:
     st.markdown("## 🕒 Analyse Temporelle")
-    if not filtered_df.empty:
-        fig_sessions_time = px.line(filtered_df.groupby("timestamp")["session_id"].count().reset_index(), x="timestamp", y="session_id", title="📅 Sessions par Jour")
-        st.plotly_chart(fig_sessions_time, use_container_width=True)
-    else:
-        st.warning("Aucune donnée disponible pour l'analyse temporelle.")
+    fig_sessions_time = px.line(filtered_df.groupby("timestamp")["session_id"].count().reset_index(), x="timestamp", y="session_id", title="📅 Sessions par Jour")
+    st.plotly_chart(fig_sessions_time, use_container_width=True)
