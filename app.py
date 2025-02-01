@@ -56,8 +56,25 @@ elif visitor_type == "Récurrent":
     filtered_df = filtered_df[filtered_df["is_repeat_visitor"] == 1]
 
 # === SCORE D'ENGAGEMENT ===
+# Assurer que timestamp est en datetime
+df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
-filtered_df['session_duration'] = filtered_df['last_req'] - filtered_df['timestamp']
+# Vérifier si "last_req" est au bon format et le convertir en datetime
+if df["last_req"].dtype != 'datetime64[ns]':
+    df["last_req"] = pd.to_numeric(df["last_req"], errors="coerce")  # Convertir en nombre si nécessaire
+    df["last_req"] = pd.to_datetime(df["last_req"], unit='s', errors="coerce")  # Convertir en datetime
+
+# Vérifier que les conversions ont bien fonctionné
+if df["last_req"].isna().sum() > 0:
+    st.warning("⚠ Certaines valeurs de 'last_req' n'ont pas pu être converties en datetime.")
+
+# Calcul de la durée de session
+df["session_duration"] = (df["last_req"] - df["timestamp"]).dt.total_seconds()
+df["session_duration"] = df["session_duration"].fillna(0)  # Remplir les valeurs NaN avec 0
+
+
+filtered_df["session_duration"] = (filtered_df["last_req"] - filtered_df["timestamp"]).dt.total_seconds()
+filtered_df["session_duration"] = filtered_df["session_duration"].fillna(0)
 
 action_weights = {
     'frontend submit': 5,
