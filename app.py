@@ -131,6 +131,7 @@ st.plotly_chart(fig_dayofweek, use_container_width=True)
 
 # Score d'engagement
 
+st.dataframe(df)
 # Calculer le score d'implication en regroupant par visitor_id
 filtered_df['session_duration'] = filtered_df['last_req'] - filtered_df['timestamp']
 
