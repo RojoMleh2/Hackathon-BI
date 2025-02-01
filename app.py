@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+import datetime
 
 # === CONFIGURATION DE LA PAGE ===
 st.set_page_config(page_title="📊 Tableau de Bord Web Analytics", layout="wide")
@@ -9,7 +9,7 @@ st.set_page_config(page_title="📊 Tableau de Bord Web Analytics", layout="wide
 # === CHARGEMENT DES DONNÉES ===
 @st.cache_data
 def load_data():
-    file_path = "owa_action_fact2.csv"  # Chemin vers ton fichier CSV
+    file_path = "owa_action_fact2.csv"  # Assure-toi que ton fichier est dans le même dossier
     df = pd.read_csv(file_path, parse_dates=["timestamp"])
     return df
 
@@ -17,20 +17,28 @@ df = load_data()
 
 # === SIDEBAR (FILTRES DYNAMIQUES) ===
 st.sidebar.header("🔍 Filtres")
-year_selected = st.sidebar.multiselect("📅 Année", df["year"].unique(), default=df["year"].unique())
-month_selected = st.sidebar.multiselect("📆 Mois", df["month"].unique(), default=df["month"].unique())
-week_selected = st.sidebar.multiselect("📊 Semaine de l'année", df["weekofyear"].unique(), default=df["weekofyear"].unique())
+
+# 🗓 Sélection d’une période avec un calendrier
+min_date = df["timestamp"].min().date()
+max_date = df["timestamp"].max().date()
+start_date, end_date = st.sidebar.date_input("📆 Sélectionner une période :", [min_date, max_date], min_value=min_date, max_value=max_date)
+
+# Filtrer les données en fonction des dates sélectionnées
+filtered_df = df[(df["timestamp"].dt.date >= start_date) & (df["timestamp"].dt.date <= end_date)]
+
+# 🔗 Sélection des canaux d’acquisition
 medium_selected = st.sidebar.multiselect("🛒 Canal d'acquisition", df["medium"].unique(), default=df["medium"].unique())
+
+# 🔗 Sélection des sources
+source_selected = st.sidebar.multiselect("🔗 Source", df["source_id"].unique(), default=df["source_id"].unique())
+
+# 👥 Type de visiteur
 visitor_type = st.sidebar.radio("👥 Type de visiteur", ["Tous", "Nouveau", "Récurrent"])
 
-# Filtrage des données en fonction des choix utilisateurs
-filtered_df = df[
-    (df["year"].isin(year_selected)) & 
-    (df["month"].isin(month_selected)) & 
-    (df["weekofyear"].isin(week_selected)) &
-    (df["medium"].isin(medium_selected)) &
-    (df["source_id"].isin(source_selected)) &
-    (df["campaign_id"].isin(campaign_selected))
+# Appliquer les autres filtres
+filtered_df = filtered_df[
+    (filtered_df["medium"].isin(medium_selected)) &
+    (filtered_df["source_id"].isin(source_selected))
 ]
 
 if visitor_type == "Nouveau":
@@ -42,7 +50,6 @@ elif visitor_type == "Récurrent":
 st.markdown("## 📊 Synthèse Globale")
 
 col1, col2, col3 = st.columns(3)
-
 col1.metric("👥 Sessions Totales", f"{filtered_df['session_id'].nunique():,}")
 col2.metric("🧑‍💻 Visiteurs Uniques", f"{filtered_df['visitor_id'].nunique():,}")
 col3.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
@@ -61,7 +68,7 @@ fig_medium = px.bar(filtered_df["medium"].value_counts(), title="📊 Canaux d'A
 st.plotly_chart(fig_medium, use_container_width=True)
 
 # 📈 Évolution du trafic
-fig_traffic = px.line(filtered_df.groupby("yyyymmdd")["session_id"].nunique(), title="📈 Évolution du Trafic")
+fig_traffic = px.line(filtered_df.groupby("timestamp")["session_id"].nunique(), title="📈 Évolution du Trafic")
 st.plotly_chart(fig_traffic, use_container_width=True)
 
 # === SECTION 2 : ENGAGEMENT UTILISATEUR ===
@@ -89,13 +96,6 @@ fig_conversion = px.bar(
 )
 st.plotly_chart(fig_conversion, use_container_width=True)
 
-# 📢 Performances des campagnes
-fig_campaign = px.bar(
-    filtered_df.groupby("campaign_id")["session_id"].count().sort_values(ascending=False).head(10),
-    title="📢 Performance des Campagnes Marketing"
-)
-st.plotly_chart(fig_campaign, use_container_width=True)
-
 # === SECTION 4 : FIDÉLISATION ===
 st.markdown("## 🔄 Fidélisation & Rétention")
 
@@ -111,7 +111,7 @@ st.plotly_chart(fig_freq, use_container_width=True)
 st.markdown("## 🕒 Analyse Temporelle")
 
 fig_sessions_time = px.line(
-    filtered_df.groupby("yyyymmdd")["session_id"].count(),
+    filtered_df.groupby("timestamp")["session_id"].count(),
     title="📅 Sessions par Jour"
 )
 st.plotly_chart(fig_sessions_time, use_container_width=True)
@@ -122,4 +122,3 @@ st.plotly_chart(fig_dayofweek, use_container_width=True)
 
 st.markdown("---")
 st.markdown("🚀 **Tableau de bord développé par IA** - Optimisé pour l’analyse de performances marketing web")
-
