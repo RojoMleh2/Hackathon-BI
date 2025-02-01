@@ -18,17 +18,26 @@ st.markdown("Visualisation interactive des données de visiteurs, sessions et ac
 # ==============================
 @st.cache_data
 def load_data():
-    df = pd.read_csv("merged_data.csv")
+    df = pd.read_csv("merged_visitor_data.csv")
     
     # Suppression des colonnes en double (_x et _y)
-    columns_to_remove = [col for col in df.columns if col.endswith('_y')]
-    df = df.drop(columns=columns_to_remove)
-    df.columns = [col.replace('_x', '') for col in df.columns]
-    
+    df = df.loc[:, ~df.columns.duplicated()]  # Supprime les doublons de colonnes
+    df.columns = [col.replace('_x', '') for col in df.columns]  # Nettoyage des noms
+
+    # Vérifier s'il y a plusieurs colonnes "yyyymmdd"
+    if "yyyymmdd_x" in df.columns and "yyyymmdd_y" in df.columns:
+        df = df.drop(columns=["yyyymmdd_y"])  # Suppression de la colonne en double
+        df = df.rename(columns={"yyyymmdd_x": "yyyymmdd"})  # Renommer proprement
+
+    # Vérifier s'il y a plusieurs colonnes "timestamp"
+    if "first_session_timestamp_x" in df.columns and "first_session_timestamp_y" in df.columns:
+        df = df.drop(columns=["first_session_timestamp_y"])
+        df = df.rename(columns={"first_session_timestamp_x": "first_session_timestamp"})
+
     # Conversion des dates et timestamps
-    df["first_session_timestamp"] = pd.to_datetime(df["first_session_timestamp"], unit='s')
+    df["first_session_timestamp"] = pd.to_datetime(df["first_session_timestamp"], unit='s', errors='coerce')
     df["yyyymmdd"] = pd.to_datetime(df["yyyymmdd"], format='%Y%m%d', errors='coerce')
-    
+
     # Remplacement des valeurs manquantes
     df.fillna({"user_email": "Inconnu", "medium": "Non défini", "source_id": 0}, inplace=True)
 
