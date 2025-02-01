@@ -1,145 +1,127 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import plotly.express as px
-import zipfile
-import os
+import plotly.graph_objects as go
 
-# ===============================
-# 📌 1. CONFIGURATION DU DASHBOARD
-# ===============================
-st.set_page_config(page_title="Tableau de Bord Marketing", page_icon="📊", layout="wide")
+# === CONFIGURATION DE LA PAGE ===
+st.set_page_config(page_title="📊 Tableau de Bord Web Analytics", layout="wide")
 
-# 📌 Ajouter un en-tête et une description
-st.title("📊 Tableau de Bord - Analyse des Performances Marketing")
-st.markdown("Ce tableau de bord interactif vous permet d'explorer les performances des visiteurs du site web à partir des données des fichiers CSV.")
-
-# ===============================
-# 📌 2. CHARGEMENT DES DONNÉES
-# ===============================
+# === CHARGEMENT DES DONNÉES ===
 @st.cache_data
 def load_data():
-    # Chargement des fichiers CSV standards
-    df_visitors = pd.read_csv("owa_visitor.csv")
-    df_actions = pd.read_csv("owa_action_fact2.csv")
-    
-    # Gestion du fichier ZIP
-    zip_path = "owa_click.zip"
-    extract_path = "extracted_data"
-    
-    # Extraction du fichier ZIP s'il existe
-    if os.path.exists(zip_path):
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(extract_path)  # Décompresser le fichier dans un dossier
-        
-        # Recherche du fichier CSV extrait
-        extracted_files = os.listdir(extract_path)
-        csv_file = [f for f in extracted_files if f.endswith(".csv")]
-        
-        if csv_file:
-            df_clicks = pd.read_csv(os.path.join(extract_path, csv_file[0]))  # Chargement du fichier CSV
-        else:
-            st.error("Aucun fichier CSV trouvé dans l'archive ZIP.")
-            df_clicks = pd.DataFrame()  # Création d'un dataframe vide en cas d'erreur
-    else:
-        st.error(f"Le fichier {zip_path} est introuvable.")
-        df_clicks = pd.DataFrame()  # Création d'un dataframe vide en cas d'erreur
-    
-    return df_visitors, df_actions, df_clicks
+    file_path = "owa_action_fact2.csv"  # Chemin vers ton fichier CSV
+    df = pd.read_csv(file_path, parse_dates=["timestamp"])
+    return df
 
-df_visitors, df_actions, df_clicks = load_data()
+df = load_data()
 
-# ===============================
-# 📌 3. BARRE LATÉRALE AVEC FILTRES INTERACTIFS
-# ===============================
-st.sidebar.header("🔍 Filtres Interactifs")
+# === SIDEBAR (FILTRES DYNAMIQUES) ===
+st.sidebar.header("🔍 Filtres")
+year_selected = st.sidebar.multiselect("📅 Année", df["year"].unique(), default=df["year"].unique())
+month_selected = st.sidebar.multiselect("📆 Mois", df["month"].unique(), default=df["month"].unique())
+week_selected = st.sidebar.multiselect("📊 Semaine de l'année", df["weekofyear"].unique(), default=df["weekofyear"].unique())
+medium_selected = st.sidebar.multiselect("🛒 Canal d'acquisition", df["medium"].unique(), default=df["medium"].unique())
+source_selected = st.sidebar.multiselect("🔗 Source", df["source_id"].unique(), default=df["source_id"].unique())
+campaign_selected = st.sidebar.multiselect("📢 Campagne", df["campaign_id"].unique(), default=df["campaign_id"].unique())
+visitor_type = st.sidebar.radio("👥 Type de visiteur", ["Tous", "Nouveau", "Récurrent"])
 
-# 📅 Filtrage par date
-min_date = df_actions["yyyymmdd"].min()
-max_date = df_actions["yyyymmdd"].max()
-date_filter = st.sidebar.slider("📅 Sélectionner une période :", min_date, max_date, (min_date, max_date))
+# Filtrage des données en fonction des choix utilisateurs
+filtered_df = df[
+    (df["year"].isin(year_selected)) & 
+    (df["month"].isin(month_selected)) & 
+    (df["weekofyear"].isin(week_selected)) &
+    (df["medium"].isin(medium_selected)) &
+    (df["source_id"].isin(source_selected)) &
+    (df["campaign_id"].isin(campaign_selected))
+]
 
-# 📍 Filtrage par type de visiteur
-visitor_type = st.sidebar.radio("👥 Type de Visiteur :", ["Tous", "Nouveaux", "Récurrents"])
-if visitor_type == "Nouveaux":
-    df_actions = df_actions[df_actions["is_new_visitor"] == 1]
-elif visitor_type == "Récurrents":
-    df_actions = df_actions[df_actions["is_repeat_visitor"] == 1]
+if visitor_type == "Nouveau":
+    filtered_df = filtered_df[filtered_df["is_new_visitor"] == 1]
+elif visitor_type == "Récurrent":
+    filtered_df = filtered_df[filtered_df["is_repeat_visitor"] == 1]
 
-# 🌍 Filtrage par source d’acquisition
-source_list = df_actions["medium"].unique().tolist()
-source_filter = st.sidebar.multiselect("🌍 Source d’Acquisition :", source_list, default=source_list)
+# === SECTION 1 : SYNTHÈSE GLOBALE ===
+st.markdown("## 📊 Synthèse Globale")
 
-# Appliquer les filtres
-df_actions = df_actions[(df_actions["yyyymmdd"] >= date_filter[0]) & (df_actions["yyyymmdd"] <= date_filter[1])]
-df_actions = df_actions[df_actions["medium"].isin(source_filter)]
+col1, col2, col3 = st.columns(3)
 
-# ===============================
-# 📌 4. INDICATEURS CLÉS DE PERFORMANCE (KPI)
-# ===============================
-st.subheader("📊 Indicateurs Clés de Performance")
+col1.metric("👥 Sessions Totales", f"{filtered_df['session_id'].nunique():,}")
+col2.metric("🧑‍💻 Visiteurs Uniques", f"{filtered_df['visitor_id'].nunique():,}")
+col3.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("👥 Visiteurs Uniques", df_visitors["id"].nunique())
-col2.metric("📈 Sessions", df_actions["session_id"].nunique())
+# 📌 Répartition Nouveaux vs. Récurrents
+visitor_dist = filtered_df["is_new_visitor"].value_counts(normalize=True) * 100
+fig_pie = px.pie(
+    names=["Nouveaux Visiteurs", "Visiteurs Récurrents"], 
+    values=[visitor_dist.get(1, 0), visitor_dist.get(0, 0)],
+    title="📌 Répartition Nouveaux vs. Récurrents"
+)
+st.plotly_chart(fig_pie, use_container_width=True)
 
-if not df_clicks.empty:
-    col3.metric("💡 Taux de Clics (CTR)", f"{(df_clicks.shape[0] / df_actions.shape[0]) * 100:.2f} %")
-else:
-    col3.metric("💡 Taux de Clics (CTR)", "Données non disponibles")
+# 📊 Canaux d'acquisition
+fig_medium = px.bar(filtered_df["medium"].value_counts(), title="📊 Canaux d'Acquisition")
+st.plotly_chart(fig_medium, use_container_width=True)
 
-col4.metric("🕒 Temps Moyen par Session", f"{df_actions['last_req'].mean():.2f} sec")
+# 📈 Évolution du trafic
+fig_traffic = px.line(filtered_df.groupby("yyyymmdd")["session_id"].nunique(), title="📈 Évolution du Trafic")
+st.plotly_chart(fig_traffic, use_container_width=True)
 
-# ===============================
-# 📌 5. ANALYSE DES VISITEURS (Graphiques)
-# ===============================
+# === SECTION 2 : ENGAGEMENT UTILISATEUR ===
+st.markdown("## 🎭 Engagement Utilisateur")
 
-st.subheader("👥 Répartition des Visiteurs")
+col4, col5 = st.columns(2)
+col4.metric("⚡ Nombre total d'actions", f"{filtered_df['action_name'].count():,}")
+col5.metric("📌 Actions moyennes par session", f"{filtered_df['action_name'].count()/filtered_df['session_id'].nunique():.2f}")
 
-# Graphique en camembert : Nouveaux vs Récurrents
-visitor_counts = df_actions["is_new_visitor"].value_counts()
-fig = px.pie(values=visitor_counts, names=["Nouveaux", "Récurrents"], title="Répartition des visiteurs")
-st.plotly_chart(fig, use_container_width=True)
+# 📊 Top actions les plus réalisées
+fig_actions = px.bar(filtered_df["action_name"].value_counts().head(5), title="🔝 Top 5 Actions les Plus Réalisées")
+st.plotly_chart(fig_actions, use_container_width=True)
 
-# Graphique en barres : Nombre de sessions par jour
-df_time_series = df_actions.groupby(["year", "month"]).size().reset_index(name="Sessions")
-fig = px.bar(df_time_series, x="month", y="Sessions", color="year", title="Nombre de Sessions par Mois")
-st.plotly_chart(fig, use_container_width=True)
+# 📅 Meilleures heures d'engagement
+filtered_df["hour"] = filtered_df["timestamp"].dt.hour
+fig_heatmap = px.density_heatmap(filtered_df, x="hour", y="dayofweek", title="⏰ Meilleures Heures d'Engagement")
+st.plotly_chart(fig_heatmap, use_container_width=True)
 
-# ===============================
-# 📌 6. ANALYSE DES CLICS (Carte de chaleur)
-# ===============================
+# === SECTION 3 : CONVERSION ===
+st.markdown("## 🎯 Conversion")
 
-st.subheader("🖱️ Analyse des Clics")
+fig_conversion = px.bar(
+    filtered_df.groupby("action_name")["session_id"].count().sort_values(ascending=False).head(5),
+    title="🎯 Actions Clés les Plus Convertissantes"
+)
+st.plotly_chart(fig_conversion, use_container_width=True)
 
-if not df_clicks.empty:
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.scatterplot(data=df_clicks, x="click_x", y="click_y", alpha=0.3)
-    plt.title("Carte de Chaleur des Clics sur la Page")
-    st.pyplot(fig)
-else:
-    st.warning("⚠️ Données des clics non disponibles. Vérifiez si le fichier ZIP est bien chargé.")
+# 📢 Performances des campagnes
+fig_campaign = px.bar(
+    filtered_df.groupby("campaign_id")["session_id"].count().sort_values(ascending=False).head(10),
+    title="📢 Performance des Campagnes Marketing"
+)
+st.plotly_chart(fig_campaign, use_container_width=True)
 
-# ===============================
-# 📌 7. ANALYSE DES SOURCES DE TRAFIC
-# ===============================
+# === SECTION 4 : FIDÉLISATION ===
+st.markdown("## 🔄 Fidélisation & Rétention")
 
-st.subheader("🌍 Sources de Trafic")
+col6, col7 = st.columns(2)
+col6.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
+col7.metric("📆 Durée moyenne entre les visites", f"{filtered_df['days_since_prior_session'].mean():.1f} jours")
 
-traffic_sources = df_actions["medium"].value_counts().reset_index()
-traffic_sources.columns = ["Source", "Sessions"]
-fig = px.bar(traffic_sources, x="Source", y="Sessions", title="Sessions par Source de Trafic", color="Source")
-st.plotly_chart(fig, use_container_width=True)
+# 📊 Répartition des visiteurs par fréquence
+fig_freq = px.histogram(filtered_df["num_prior_sessions"], title="📊 Fréquence des Visites")
+st.plotly_chart(fig_freq, use_container_width=True)
 
-# ===============================
-# 📌 8. EXPORT DES DONNÉES
-# ===============================
+# === SECTION 5 : ANALYSE TEMPORELLE ===
+st.markdown("## 🕒 Analyse Temporelle")
 
-st.sidebar.subheader("📂 Exporter les Données")
+fig_sessions_time = px.line(
+    filtered_df.groupby("yyyymmdd")["session_id"].count(),
+    title="📅 Sessions par Jour"
+)
+st.plotly_chart(fig_sessions_time, use_container_width=True)
 
-csv = df_actions.to_csv(index=False).encode("utf-8")
-st.sidebar.download_button(label="📥 Télécharger les Données Filtrées", data=csv, file_name="filtered_data.csv", mime="text/csv")
+# 📊 Meilleurs jours pour l’engagement
+fig_dayofweek = px.bar(filtered_df.groupby("dayofweek")["session_id"].count(), title="📊 Meilleurs Jours pour l'Engagement")
+st.plotly_chart(fig_dayofweek, use_container_width=True)
 
-st.sidebar.write("📊 **Créé avec amour par un expert en Data Science !** ❤️")
+st.markdown("---")
+st.markdown("🚀 **Tableau de bord développé par IA** - Optimisé pour l’analyse de performances marketing web")
+
