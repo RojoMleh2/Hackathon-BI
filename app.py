@@ -20,7 +20,7 @@ st.markdown("Ce tableau de bord interactif vous permet d'explorer les performanc
 @st.cache_data
 def load_data():
     df_visitors = pd.read_csv("owa_visitor.csv")
-    df_actions = pd.read_csv("owa_action_fact.csv")
+    df_actions = pd.read_csv("owa_action_fact2.csv")
     df_clicks = pd.read_csv("owa_click.csv")
     return df_visitors, df_actions, df_clicks
 
