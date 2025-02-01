@@ -110,27 +110,36 @@ tabs = st.tabs(["🏠 Accueil", "📥 Acquisition", "🎭 Engagement", "🎯 Con
 # === 🏠 ACCUEIL (KPI GLOBAUX) ===
 with tabs[0]:
     st.markdown("## 🏠 Vue Globale des Performances SEO")
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("👥 Sessions Totales", f"{filtered_df['session_id'].nunique():,}")
-    col2.metric("🧑‍💻 Visiteurs Uniques", f"{filtered_df['visitor_id'].nunique():,}")
-    col3.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
+    st.metric("👥 Sessions Totales", f"{filtered_df['session_id'].nunique():,}")
+    st.metric("🧑‍💻 Visiteurs Uniques", f"{filtered_df['visitor_id'].nunique():,}")
+    st.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
 
-# === 📊 SCORE D’ENGAGEMENT (ISOLÉ) ===
+# === 📥 ACQUISITION ===
+with tabs[1]:
+    st.markdown("## 📥 Analyse du Trafic & Acquisition")
+    fig_medium = px.bar(filtered_df["medium"].value_counts().reset_index(), x="index", y="medium", title="📊 Canaux d'Acquisition")
+    st.plotly_chart(fig_medium, use_container_width=True)
+
+# === 🎭 ENGAGEMENT ===
+with tabs[2]:
+    st.markdown("## 🎭 Engagement Utilisateur")
+    fig_actions = px.bar(filtered_df["action_name"].value_counts().reset_index().head(5), x="index", y="action_name", title="🔝 Top 5 Actions les Plus Réalisées")
+    st.plotly_chart(fig_actions, use_container_width=True)
+
+# === 🎯 CONVERSION & RÉTENTION ===
+with tabs[3]:
+    st.markdown("## 🎯 Conversion & Rétention")
+    fig_conversion = px.bar(filtered_df.groupby("action_name")["session_id"].count().reset_index().sort_values(by="session_id", ascending=False).head(5), x="action_name", y="session_id", title="🎯 Actions Clés les Plus Convertissantes")
+    st.plotly_chart(fig_conversion, use_container_width=True)
+
+# === 📊 SCORE D’ENGAGEMENT ===
 with tabs[4]:
     st.markdown("## 📊 Score d’Engagement des Visiteurs")
-
-    if 'engagement_score' in filtered_df.columns:
-        fig_engagement = px.scatter(filtered_df, x='visitor_id', y='engagement_score',
-                                    color='engagement_score', size='engagement_score',
-                                    title="Engagement Score des Visiteurs",
-                                    color_continuous_scale=[[0, "blue"], [1, "red"]])
-        st.plotly_chart(fig_engagement, use_container_width=True)
+    fig_engagement = px.scatter(filtered_df, x='visitor_id', y='engagement_score', color='engagement_score', size='engagement_score', title="Engagement Score des Visiteurs")
+    st.plotly_chart(fig_engagement, use_container_width=True)
 
 # === 🕒 ANALYSE TEMPORELLE ===
 with tabs[5]:
     st.markdown("## 🕒 Analyse Temporelle")
-
     fig_sessions_time = px.line(filtered_df.groupby("timestamp")["session_id"].count().reset_index(), x="timestamp", y="session_id", title="📅 Sessions par Jour")
     st.plotly_chart(fig_sessions_time, use_container_width=True)
-
