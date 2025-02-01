@@ -195,7 +195,7 @@ best_visitor = df_grouped.loc[df_grouped['engagement_score'].idxmax(), 'visitor_
 best_score = df_grouped['engagement_score'].max()
 
 # Scatter Plot avec Plotly
-st.subheader("Scatter Plot : Score d'Implication des Visiteurs")
+st.subheader("Score d'Implication des Visiteurs")
 fig = px.scatter(df_grouped, x='visitor_id', y='engagement_score',
                  color='engagement_score',
                  size='engagement_score',
