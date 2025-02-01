@@ -9,11 +9,20 @@ st.set_page_config(page_title="📊 Tableau de Bord Web Analytics", layout="wide
 # === CHARGEMENT DES DONNÉES ===
 @st.cache_data
 def load_data():
-    file_path = "owa_action_fact2.csv"  # Assure-toi que ton fichier est dans le même dossier
+    file_path = "owa_action_fact2.csv"  
     df = pd.read_csv(file_path, parse_dates=["timestamp"])
+    
+    # Nettoyer les noms de colonnes (évite les erreurs de KeyError)
+    df.columns = df.columns.str.strip()
+    
     return df
 
 df = load_data()
+
+# Vérification de l'existence de "source_name"
+if "source_name" not in df.columns:
+    st.error("🚨 Erreur : La colonne 'source_name' n'existe pas dans le fichier.")
+    st.stop()
 
 # === SIDEBAR (FILTRES DYNAMIQUES) ===
 st.sidebar.header("🔍 Filtres")
@@ -30,7 +39,7 @@ filtered_df = df[(df["timestamp"].dt.date >= start_date) & (df["timestamp"].dt.d
 medium_selected = st.sidebar.multiselect("🛒 Canal d'acquisition", df["medium"].unique(), default=df["medium"].unique())
 
 # 🔗 Sélection des sources (affichage des noms des sources)
-source_selected = st.sidebar.multiselect("🔗 Source", df["source_name"].unique(), default=df["source_name"].unique())
+source_selected = st.sidebar.multiselect("🔗 Source", df["source_name"].dropna().unique(), default=df["source_name"].dropna().unique())
 
 # 👥 Type de visiteur
 visitor_type = st.sidebar.radio("👥 Type de visiteur", ["Tous", "Nouveau", "Récurrent"])
