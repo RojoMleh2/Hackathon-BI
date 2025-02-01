@@ -133,7 +133,6 @@ st.plotly_chart(fig_dayofweek, use_container_width=True)
 # Charger les données (Simulé ici, remplacer par le fichier réel)
 file_path = "owa_action_fact.csv"
 df = pd.read_csv(file_path)
-df = df[(df["timestamp"].dt.date >= start_date) & (df["timestamp"].dt.date <= end_date)]
 
 # Calculer le score d'implication en regroupant par visitor_id
 df['session_duration'] = df['last_req'] - df['timestamp']
