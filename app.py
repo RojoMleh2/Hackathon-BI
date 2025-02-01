@@ -132,7 +132,7 @@ st.plotly_chart(fig_dayofweek, use_container_width=True)
 # Score d'engagement
 
 # Calculer le score d'implication en regroupant par visitor_id
-df['session_duration'] = df['last_req'] - df['timestamp']
+filtered_df['session_duration'] = filtered_df['last_req'] - filtered_df['timestamp']
 
 action_weights = {
     'frontend submit': 5,
@@ -141,11 +141,11 @@ action_weights = {
     'frontend create': 8,
     'view': 2  # Exemple de poids augmentés
 }
-df['action_score'] = df['action_name'].map(action_weights).fillna(1)
-df['group_score'] = df['action_group'].apply(lambda x: 4 if x == 'publish' else 2)
+filtered_df['action_score'] = filtered_df['action_name'].map(action_weights).fillna(1)
+filtered_df['group_score'] = filtered_df['action_group'].apply(lambda x: 4 if x == 'publish' else 2)
 
 # Agrégation des données par visiteur
-df_grouped = df.groupby('visitor_id').agg(
+df_grouped = filtered_df.groupby('visitor_id').agg(
     num_sessions=('session_id', 'nunique'),
     repeat_visitor=('is_repeat_visitor', 'max'),
     new_visitor=('is_new_visitor', 'max'),
