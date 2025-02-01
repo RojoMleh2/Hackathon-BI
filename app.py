@@ -21,8 +21,6 @@ year_selected = st.sidebar.multiselect("📅 Année", df["year"].unique(), defau
 month_selected = st.sidebar.multiselect("📆 Mois", df["month"].unique(), default=df["month"].unique())
 week_selected = st.sidebar.multiselect("📊 Semaine de l'année", df["weekofyear"].unique(), default=df["weekofyear"].unique())
 medium_selected = st.sidebar.multiselect("🛒 Canal d'acquisition", df["medium"].unique(), default=df["medium"].unique())
-source_selected = st.sidebar.multiselect("🔗 Source", df["source_id"].unique(), default=df["source_id"].unique())
-campaign_selected = st.sidebar.multiselect("📢 Campagne", df["campaign_id"].unique(), default=df["campaign_id"].unique())
 visitor_type = st.sidebar.radio("👥 Type de visiteur", ["Tous", "Nouveau", "Récurrent"])
 
 # Filtrage des données en fonction des choix utilisateurs
