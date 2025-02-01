@@ -138,7 +138,8 @@ with tabs[3]:
 # === 📊 SCORE D’ENGAGEMENT ===
 with tabs[4]:
     st.markdown("## 📊 Score d’Engagement des Visiteurs")
-    fig_engagement = px.scatter(filtered_df, x='visitor_id', y='engagement_score', color='engagement_score', size='engagement_score', title="Engagement Score des Visiteurs")
+    filtered_df_eng = filtered_df[(filtered_df['engagement_score'] >= 0) & (filtered_df['engagement_score'] <= 20)]
+    fig_engagement = px.scatter(filtered_df_eng, x='visitor_id', y='engagement_score', color='engagement_score', size='engagement_score', title="Engagement Score des Visiteurs")
     st.plotly_chart(fig_engagement, use_container_width=True)
 
 # === 🕒 ANALYSE TEMPORELLE ===
