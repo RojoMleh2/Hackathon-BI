@@ -1,110 +1,73 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+import plotly.express as px
 
-# ===============================
-# 📌 1. CONFIGURATION DU DASHBOARD
-# ===============================
-st.set_page_config(page_title="Tableau de Bord - Analyse de performance Marketing", page_icon="📊", layout="wide")
-
-# 📌 Ajouter un en-tête et une description
-st.title("📊 Tableau de Bord - Analyse des Performances Marketing")
-st.markdown("Ce tableau de bord interactif vous permet d'explorer les performances des visiteurs du site web à partir des données des fichiers CSV.")
-
-# ===============================
-# 📌 2. CHARGEMENT DES DONNÉES
-# ===============================
-@st.cache_data
+# Charger les données
 def load_data():
-    df_merge = pd.read_csv("merged_data.csv")
-    return df_merge
+    file_path = "owa_action_fact.csv"
+    df = pd.read_csv(file_path)
+    return df
 
-df_merge = load_data()
+df = load_data()
 
-# ===============================
-# 📌 3. BARRE LATÉRALE AVEC FILTRES INTERACTIFS
-# ===============================
-st.sidebar.header("🔍 Filtres Interactifs")
+# Configurer le tableau de bord
+st.set_page_config(page_title="Dashboard Analytics", layout="wide")
 
-# 📅 Filtrage par date
-min_date = df_merge["yyyymmdd_x"].min()
-max_date = df_merge["yyyymmdd_x"].max()
-date_filter = st.sidebar.slider("📅 Sélectionner une période :", min_date, max_date, (min_date, max_date))
+# Sidebar - Filtrage par période
+df['timestamp'] = pd.to_datetime(df['id'], errors='coerce')
+date_min, date_max = df['timestamp'].min(), df['timestamp'].max()
+date_range = st.sidebar.date_input("Filtrer par période", [date_min, date_max])
 
-# 📍 Filtrage par type de visiteur
-visitor_type = st.sidebar.radio("👥 Type de Visiteur :", ["Tous", "Nouveaux", "Récurrents"])
-if visitor_type == "Nouveaux":
-    df_actions = df_merge[df_merge["is_new_visitor_x"] == 1]
-elif visitor_type == "Récurrents":
-    df_actions = df_merge[df_merge["is_repeat_visitor_x"] == 1]
+# Filtrage des données
+df_filtered = df[(df['timestamp'] >= pd.to_datetime(date_range[0])) & (df['timestamp'] <= pd.to_datetime(date_range[1]))]
 
-# 🌍 Filtrage par source d’acquisition
-source_list = df_actions["medium_x"].unique().tolist()
-source_filter = st.sidebar.multiselect("🌍 Source d’Acquisition :", source_list, default=source_list)
-
-# Appliquer les filtres
-df_actions = df_actions[(df_actions["yyyymmdd"] >= date_filter[0]) & (df_actions["yyyymmdd"] <= date_filter[1])]
-df_actions = df_actions[df_actions["medium"].isin(source_filter)]
-
-# ===============================
-# 📌 4. INDICATEURS CLÉS DE PERFORMANCE (KPI)
-# ===============================
-st.subheader("📊 Indicateurs Clés de Performance")
+# Vue Générale
+st.title("📊 Tableau de Bord - Vue Générale")
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("👥 Visiteurs Uniques", df_merge["id"].nunique())
-col2.metric("📈 Sessions", df_actions["session_id"].nunique())
-col3.metric("💡 Taux de Clics (CTR)", f"{(df_merge.shape[0] / df_actions.shape[0]) * 100:.2f} %")
-col4.metric("🕒 Temps Moyen par Session", f"{df_actions['last_req'].mean():.2f} sec")
 
-# ===============================
-# 📌 5. ANALYSE DES VISITEURS (Graphiques)
-# ===============================
+with col1:
+    total_visitors = df_filtered['visitor_id'].nunique()
+    st.metric("Nombre total de visiteurs uniques", total_visitors)
 
-st.subheader("👥 Répartition des Visiteurs")
+with col2:
+    total_sessions = df_filtered['session_id'].nunique()
+    st.metric("Nombre total de sessions", total_sessions)
 
-# Graphique en camembert : Nouveaux vs Récurrents
-visitor_counts = df_actions["is_new_visitor"].value_counts()
-fig = px.pie(values=visitor_counts, names=["Nouveaux", "Récurrents"], title="Répartition des visiteurs")
-st.plotly_chart(fig, use_container_width=True)
+with col3:
+    conversion_rate = (df_filtered['numeric_value'].sum() / total_sessions) * 100
+    st.metric("Taux de conversion", f"{conversion_rate:.2f}%")
 
-# Graphique en barres : Nombre de sessions par jour
-df_time_series = df_actions.groupby(["year", "month"]).size().reset_index(name="Sessions")
-fig = px.bar(df_time_series, x="month", y="Sessions", color="year", title="Nombre de Sessions par Mois")
-st.plotly_chart(fig, use_container_width=True)
+with col4:
+    bounce_rate = (df_filtered[df_filtered['action_name'] == 'bounce'].shape[0] / total_sessions) * 100
+    st.metric("Taux de rebond", f"{bounce_rate:.2f}%")
 
-# ===============================
-# 📌 6. ANALYSE DES CLICS (Carte de chaleur)
-# ===============================
+# Analyse de l'Engagement Utilisateur
+st.header("📊 Analyse de l'Engagement Utilisateur")
+fig_actions = px.bar(df_filtered['action_name'].value_counts().head(10), title="Actions les plus réalisées")
+st.plotly_chart(fig_actions)
 
-st.subheader("🖱️ Analyse des Clics")
+fig_visitors = px.pie(df_filtered, names='visitor_id', title="Taux de visiteurs récurrents vs nouveaux")
+st.plotly_chart(fig_visitors)
 
-# Carte de chaleur des clics sur la page
-fig, ax = plt.subplots(figsize=(10, 5))
-sns.scatterplot(data=df_merge, x="click_x", y="click_y", alpha=0.3)
-plt.title("Carte de Chaleur des Clics sur la Page")
-st.pyplot(fig)
+# Analyse des Clics et Interactions
+st.header("📊 Analyse des Clics")
+fig_clicks = px.scatter(df_filtered, x='numeric_value', y='action_name', title="Carte de chaleur des clics")
+st.plotly_chart(fig_clicks)
 
-# ===============================
-# 📌 7. ANALYSE DES SOURCES DE TRAFIC
-# ===============================
+# Analyse du Trafic et Sources d'Acquisition
+st.header("📊 Analyse du Trafic")
+fig_sources = px.pie(df_filtered, names='referer_id', title="Origine du trafic")
+st.plotly_chart(fig_sources)
 
-st.subheader("🌍 Sources de Trafic")
+# Performance des Heures & Jours d'Activité
+st.header("📊 Performance par Heure et Jour")
+df_filtered['hour'] = df_filtered['timestamp'].dt.hour
+fig_hours = px.histogram(df_filtered, x='hour', title="Activité par heure")
+st.plotly_chart(fig_hours)
 
-# Graphique en barres des sources de trafic
-traffic_sources = df_actions["medium"].value_counts().reset_index()
-traffic_sources.columns = ["Source", "Sessions"]
-fig = px.bar(traffic_sources, x="Source", y="Sessions", title="Sessions par Source de Trafic", color="Source")
-st.plotly_chart(fig, use_container_width=True)
+# Parcours Utilisateur
+st.header("📊 Parcours Utilisateur")
+st.write("Diagramme en cours de développement")
 
-# ===============================
-# 📌 8. EXPORT DES DONNÉES
-# ===============================
-
-st.sidebar.subheader("📂 Exporter les Données")
-
-# Bouton pour télécharger les données filtrées
-csv = df_actions.to_csv(index=False).encode("utf-8")
-st.sidebar.download_button(label="📥 Télécharger les Données Filtrées", data=csv, file_name="filtered_data.csv", mime="text/csv")
-
-st.sidebar.write("📊 **Créé avec amour par un expert en Data Science !** ❤️")
+st.sidebar.markdown("Développé avec Streamlit 🚀")
