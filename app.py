@@ -67,6 +67,36 @@ if df["last_req"].dtype != 'datetime64[ns]':
 if df["last_req"].isna().sum() > 0:
     st.warning("⚠ Certaines valeurs de 'last_req' n'ont pas pu être converties en datetime.")
 
+# Vérifier les types de données avant conversion
+st.write("Avant conversion :")
+st.write(df.dtypes)
+
+# ✅ Correction : Assurer que "timestamp" est bien en datetime
+if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+
+# ✅ Correction : Assurer que "last_req" est bien en datetime
+if not pd.api.types.is_datetime64_any_dtype(df["last_req"]):
+    df["last_req"] = pd.to_numeric(df["last_req"], errors="coerce")  # Convertir en nombre si nécessaire
+    df["last_req"] = pd.to_datetime(df["last_req"], unit="s", errors="coerce")  # Convertir en datetime
+
+# 🔍 Vérifier s'il y a encore des NaN après conversion
+st.write("Après conversion :")
+st.write(df.dtypes)
+
+# Vérifier les valeurs incorrectes avant la soustraction
+if df["last_req"].isna().sum() > 0 or df["timestamp"].isna().sum() > 0:
+    st.warning("⚠ Certaines valeurs n'ont pas pu être converties en datetime !")
+    st.write(df[df["last_req"].isna() | df["timestamp"].isna()])
+
+# ✅ Correction de la soustraction
+df["session_duration"] = (df["last_req"] - df["timestamp"]).dt.total_seconds()
+df["session_duration"] = df["session_duration"].fillna(0)  # Remplacer NaN par 0
+
+# ✅ Correction appliquée aussi au `filtered_df`
+filtered_df["session_duration"] = (filtered_df["last_req"] - filtered_df["timestamp"]).dt.total_seconds()
+filtered_df["session_duration"] = filtered_df["session_duration"].fillna(0)
+
 # Calcul de la durée de session en secondes
 df["session_duration"] = (df["last_req"] - df["timestamp"]).dt.total_seconds().fillna(0)
 
