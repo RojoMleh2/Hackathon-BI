@@ -211,7 +211,6 @@ st.metric("Nombre total de sessions", df_grouped['num_sessions'].sum())
 st.metric("Score moyen d'engagement", round(df_grouped['engagement_score'].mean(), 2))
 st.metric("Nombre moyen d'actions uniques", round(df_grouped['unique_actions'].mean(), 2))
 st.metric("Nombre moyen de groupes uniques", round(df_grouped['unique_groups'].mean(), 2))
-st.metric("Meilleur visiteur", f"{best_visitor} avec un score de {round(best_score, 2)}")
 
 st.markdown("---")
 st.markdown("🚀 **Tableau de bord développé par IA** - Optimisé pour l’analyse de performances marketing web")
