@@ -16,7 +16,7 @@ def load_data():
     required_columns = [
         'session_id', 'visitor_id', 'is_repeat_visitor', 'is_new_visitor',
         'numeric_value', 'days_since_prior_session', 'days_since_first_session',
-        'action_name', 'action_group'
+        'action_name', 'action_group', 'medium', 'source_name'
     ]
     
     missing_columns = [col for col in required_columns if col not in df.columns]
@@ -124,7 +124,9 @@ with tabs[1]:
 # === 🎭 ENGAGEMENT ===
 with tabs[2]:
     st.markdown("## 🎭 Engagement Utilisateur")
-    fig_actions = px.bar(filtered_df["action_name"].value_counts().reset_index().head(5), x="index", y="action_name", title="🔝 Top 5 Actions les Plus Réalisées")
+    action_counts = filtered_df["action_name"].value_counts().reset_index()
+    action_counts.columns = ["action_name", "count"]
+    fig_actions = px.bar(action_counts.head(5), x="action_name", y="count", title="🔝 Top 5 Actions les Plus Réalisées")
     st.plotly_chart(fig_actions, use_container_width=True)
 
 # === 🎯 CONVERSION & RÉTENTION ===
