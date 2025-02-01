@@ -56,25 +56,22 @@ elif visitor_type == "Récurrent":
     filtered_df = filtered_df[filtered_df["is_repeat_visitor"] == 1]
 
 # === SCORE D'ENGAGEMENT ===
-# Assurer que timestamp est en datetime
+# 🛠 Correction : Assurer que "last_req" et "timestamp" sont bien en datetime
 df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
-# Vérifier si "last_req" est au bon format et le convertir en datetime
 if df["last_req"].dtype != 'datetime64[ns]':
     df["last_req"] = pd.to_numeric(df["last_req"], errors="coerce")  # Convertir en nombre si nécessaire
-    df["last_req"] = pd.to_datetime(df["last_req"], unit='s', errors="coerce")  # Convertir en datetime
+    df["last_req"] = pd.to_datetime(df["last_req"], unit="s", errors="coerce")  # Convertir en datetime
 
-# Vérifier que les conversions ont bien fonctionné
+# Vérifier si les conversions ont bien fonctionné
 if df["last_req"].isna().sum() > 0:
     st.warning("⚠ Certaines valeurs de 'last_req' n'ont pas pu être converties en datetime.")
 
-# Calcul de la durée de session
-df["session_duration"] = (df["last_req"] - df["timestamp"]).dt.total_seconds()
-df["session_duration"] = df["session_duration"].fillna(0)  # Remplir les valeurs NaN avec 0
+# Calcul de la durée de session en secondes
+df["session_duration"] = (df["last_req"] - df["timestamp"]).dt.total_seconds().fillna(0)
 
-
-filtered_df["session_duration"] = (filtered_df["last_req"] - filtered_df["timestamp"]).dt.total_seconds()
-filtered_df["session_duration"] = filtered_df["session_duration"].fillna(0)
+# Appliquer la correction au dataframe filtré
+filtered_df["session_duration"] = (filtered_df["last_req"] - filtered_df["timestamp"]).dt.total_seconds().fillna(0)
 
 action_weights = {
     'frontend submit': 5,
@@ -126,14 +123,9 @@ df_grouped['engagement_score'] = (df_grouped['engagement_score'] - df_grouped['e
 # Supprimer les utilisateurs avec un score d'implication de 0
 df_grouped = df_grouped[df_grouped['engagement_score'] > 0]
 
-# Trouver l'utilisateur avec le score le plus élevé
-best_visitor = df_grouped.loc[df_grouped['engagement_score'].idxmax(), 'visitor_id']
-best_score = df_grouped['engagement_score'].max()
-
 # Streamlit App
 st.title("Tableau de Bord d'Implication des Visiteurs")
 
-# Afficher le scatter plot corrigé
 st.subheader("Scatter Plot : Score d'Implication des Visiteurs")
 
 # ✅ Correction : Convertir visitor_id en chaîne de caractères pour une meilleure lisibilité
@@ -151,9 +143,8 @@ fig.update_layout(yaxis=dict(range=[df_grouped['engagement_score'].min(), df_gro
 
 st.plotly_chart(fig)
 
-# Afficher le tableau des données utilisées
 st.subheader("Données Agrégées par Visiteur")
 st.dataframe(df_grouped)
 
 st.markdown("---")
-st.markdown("🚀 **Tableau de bord développé par IA** - Optimisé pour l’analyse de performances marketing web")
+st.markdown("🚀 **Tableau de bord optimisé pour l’analyse de performances marketing web**")
