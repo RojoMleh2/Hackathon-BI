@@ -19,8 +19,15 @@ st.markdown("Ce tableau de bord interactif vous permet d'explorer les performanc
 # ===============================
 @st.cache_data
 def load_data():
+<<<<<<< HEAD
     df_merge = pd.read_csv("merged_visitor_data.csv")
     return df_merge
+=======
+    df_visitors = pd.read_csv("owa_visitor.csv")
+    df_actions = pd.read_csv("owa_action_fact2.csv")
+    df_clicks = pd.read_csv("owa_click.csv")
+    return df_visitors, df_actions, df_clicks
+>>>>>>> 536696d4e9f20be5e7ef8fb7859767fcac640b67
 
 df_merge = load_data()
 
