@@ -194,18 +194,6 @@ df_grouped = df_grouped[df_grouped['engagement_score'] <= 20]
 best_visitor = df_grouped.loc[df_grouped['engagement_score'].idxmax(), 'visitor_id']
 best_score = df_grouped['engagement_score'].max()
 
-# Streamlit App
-st.title("Tableau de Bord d'Implication des Visiteurs")
-
-# Afficher les KPIs
-st.subheader("KPIs Clés")
-st.metric("Nombre total de visiteurs", df_grouped['visitor_id'].nunique())
-st.metric("Nombre total de sessions", df_grouped['num_sessions'].sum())
-st.metric("Score moyen d'engagement", round(df_grouped['engagement_score'].mean(), 2))
-st.metric("Nombre moyen d'actions uniques", round(df_grouped['unique_actions'].mean(), 2))
-st.metric("Nombre moyen de groupes uniques", round(df_grouped['unique_groups'].mean(), 2))
-st.metric("Meilleur visiteur", f"{best_visitor} avec un score de {round(best_score, 2)}")
-
 # Scatter Plot avec Plotly
 st.subheader("Scatter Plot : Score d'Implication des Visiteurs")
 fig = px.scatter(df_grouped, x='visitor_id', y='engagement_score',
@@ -216,11 +204,6 @@ fig = px.scatter(df_grouped, x='visitor_id', y='engagement_score',
                  color_continuous_scale=[[0, "blue"], [1, "red"]])
 fig.update_layout(yaxis=dict(range=[0, 20]))
 st.plotly_chart(fig)
-
-# Afficher le tableau des données utilisées
-st.subheader("Données Agrégées par Visiteur")
-st.dataframe(df_grouped)
-
 
 st.markdown("---")
 st.markdown("🚀 **Tableau de bord développé par IA** - Optimisé pour l’analyse de performances marketing web")
