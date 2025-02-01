@@ -37,12 +37,12 @@ date_filter = st.sidebar.slider("📅 Sélectionner une période :", min_date, m
 # 📍 Filtrage par type de visiteur
 visitor_type = st.sidebar.radio("👥 Type de Visiteur :", ["Tous", "Nouveaux", "Récurrents"])
 if visitor_type == "Nouveaux":
-    df_actions = df_merge[df_merge["is_new_visitor"] == 1]
+    df_actions = df_merge[df_merge["is_new_visitor_x"] == 1]
 elif visitor_type == "Récurrents":
-    df_actions = df_merge[df_merge["is_repeat_visitor"] == 1]
+    df_actions = df_merge[df_merge["is_repeat_visitor_x"] == 1]
 
 # 🌍 Filtrage par source d’acquisition
-source_list = df_actions["medium"].unique().tolist()
+source_list = df_actions["medium_x"].unique().tolist()
 source_filter = st.sidebar.multiselect("🌍 Source d’Acquisition :", source_list, default=source_list)
 
 # Appliquer les filtres
