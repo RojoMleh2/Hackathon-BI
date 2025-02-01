@@ -55,84 +55,8 @@ if visitor_type == "Nouveau":
 elif visitor_type == "Récurrent":
     filtered_df = filtered_df[filtered_df["is_repeat_visitor"] == 1]
 
-# === SECTION 1 : SYNTHÈSE GLOBALE ===
-st.markdown("## 📊 Synthèse Globale")
+# === SCORE D'ENGAGEMENT ===
 
-col1, col2, col3 = st.columns(3)
-col1.metric("👥 Sessions Totales", f"{filtered_df['session_id'].nunique():,}")
-col2.metric("🧑‍💻 Visiteurs Uniques", f"{filtered_df['visitor_id'].nunique():,}")
-col3.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
-
-# 📌 Répartition Nouveaux vs. Récurrents
-visitor_dist = filtered_df["is_new_visitor"].value_counts(normalize=True) * 100
-fig_pie = px.pie(
-    names=["Nouveaux Visiteurs", "Visiteurs Récurrents"],
-    values=[visitor_dist.get(1, 0), visitor_dist.get(0, 0)],
-    title="📌 Répartition Nouveaux vs. Récurrents"
-)
-st.plotly_chart(fig_pie, use_container_width=True)
-
-# 📊 Canaux d'acquisition
-fig_medium = px.bar(filtered_df["medium"].value_counts(), title="📊 Canaux d'Acquisition")
-st.plotly_chart(fig_medium, use_container_width=True)
-
-# 📈 Évolution du trafic
-fig_traffic = px.line(filtered_df.groupby("timestamp")["session_id"].nunique(), title="📈 Évolution du Trafic")
-st.plotly_chart(fig_traffic, use_container_width=True)
-
-# === SECTION 2 : ENGAGEMENT UTILISATEUR ===
-st.markdown("## 🎭 Engagement Utilisateur")
-
-col4, col5 = st.columns(2)
-col4.metric("⚡ Nombre total d'actions", f"{filtered_df['action_name'].count():,}")
-col5.metric("📌 Actions moyennes par session", f"{filtered_df['action_name'].count()/filtered_df['session_id'].nunique():.2f}")
-
-# 📊 Top actions les plus réalisées
-fig_actions = px.bar(filtered_df["action_name"].value_counts().head(5), title="🔝 Top 5 Actions les Plus Réalisées")
-st.plotly_chart(fig_actions, use_container_width=True)
-
-# 📅 Meilleures heures d'engagement
-filtered_df["hour"] = filtered_df["timestamp"].dt.hour
-fig_heatmap = px.density_heatmap(filtered_df, x="hour", y="dayofweek", title="⏰ Meilleures Heures d'Engagement")
-st.plotly_chart(fig_heatmap, use_container_width=True)
-
-# === SECTION 3 : CONVERSION ===
-st.markdown("## 🎯 Conversion")
-
-fig_conversion = px.bar(
-    filtered_df.groupby("action_name")["session_id"].count().sort_values(ascending=False).head(5),
-    title="🎯 Actions Clés les Plus Convertissantes"
-)
-st.plotly_chart(fig_conversion, use_container_width=True)
-
-# === SECTION 4 : FIDÉLISATION ===
-st.markdown("## 🔄 Fidélisation & Rétention")
-
-col6, col7 = st.columns(2)
-col6.metric("🔁 Taux de Retour", f"{filtered_df['is_repeat_visitor'].mean()*100:.2f} %")
-col7.metric("📆 Durée moyenne entre les visites", f"{filtered_df['days_since_prior_session'].mean():.1f} jours")
-
-# 📊 Répartition des visiteurs par fréquence
-fig_freq = px.histogram(filtered_df["num_prior_sessions"], title="📊 Fréquence des Visites")
-st.plotly_chart(fig_freq, use_container_width=True)
-
-# === SECTION 5 : ANALYSE TEMPORELLE ===
-st.markdown("## 🕒 Analyse Temporelle")
-
-fig_sessions_time = px.line(
-    filtered_df.groupby("timestamp")["session_id"].count(),
-    title="📅 Sessions par Jour"
-)
-st.plotly_chart(fig_sessions_time, use_container_width=True)
-
-# 📊 Meilleurs jours pour l’engagement
-fig_dayofweek = px.bar(filtered_df.groupby("dayofweek")["session_id"].count(), title="📊 Meilleurs Jours pour l'Engagement")
-st.plotly_chart(fig_dayofweek, use_container_width=True)
-
-# Score d'engagement
-
-st.dataframe(filtered_df)
-# Calculer le score d'implication en regroupant par visitor_id
 filtered_df['session_duration'] = filtered_df['last_req'] - filtered_df['timestamp']
 
 action_weights = {
@@ -185,9 +109,6 @@ df_grouped['engagement_score'] = (df_grouped['engagement_score'] - df_grouped['e
 # Supprimer les utilisateurs avec un score d'implication de 0
 df_grouped = df_grouped[df_grouped['engagement_score'] > 0]
 
-# Filtrer pour ne conserver que les scores inférieurs ou égaux à 20
-df_grouped = df_grouped[df_grouped['engagement_score'] <= 20]
-
 # Trouver l'utilisateur avec le score le plus élevé
 best_visitor = df_grouped.loc[df_grouped['engagement_score'].idxmax(), 'visitor_id']
 best_score = df_grouped['engagement_score'].max()
@@ -195,24 +116,22 @@ best_score = df_grouped['engagement_score'].max()
 # Streamlit App
 st.title("Tableau de Bord d'Implication des Visiteurs")
 
-# Afficher les KPIs
-st.subheader("KPIs Clés")
-st.metric("Nombre total de visiteurs", df_grouped['visitor_id'].nunique())
-st.metric("Nombre total de sessions", df_grouped['num_sessions'].sum())
-st.metric("Score moyen d'engagement", round(df_grouped['engagement_score'].mean(), 2))
-st.metric("Nombre moyen d'actions uniques", round(df_grouped['unique_actions'].mean(), 2))
-st.metric("Nombre moyen de groupes uniques", round(df_grouped['unique_groups'].mean(), 2))
-st.metric("Meilleur visiteur", f"{best_visitor} avec un score de {round(best_score, 2)}")
-
-# Scatter Plot avec Plotly
+# Afficher le scatter plot corrigé
 st.subheader("Scatter Plot : Score d'Implication des Visiteurs")
+
+# ✅ Correction : Convertir visitor_id en chaîne de caractères pour une meilleure lisibilité
+df_grouped['visitor_id'] = df_grouped['visitor_id'].astype(str)
+
+# ✅ Correction : Ajustement dynamique de l'axe Y
 fig = px.scatter(df_grouped, x='visitor_id', y='engagement_score',
                  color='engagement_score',
                  size='engagement_score',
                  hover_data=['num_sessions', 'total_action_score', 'total_group_score'],
                  title="Engagement Score des Visiteurs",
-                 color_continuous_scale=[[0, "blue"], [1, "red"]])
-fig.update_layout(yaxis=dict(range=[0, 20]))
+                 color_continuous_scale="Blues")
+
+fig.update_layout(yaxis=dict(range=[df_grouped['engagement_score'].min(), df_grouped['engagement_score'].max()]))
+
 st.plotly_chart(fig)
 
 # Afficher le tableau des données utilisées
