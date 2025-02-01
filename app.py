@@ -19,7 +19,7 @@ st.markdown("Visualisation interactive des données de visiteurs, sessions et ac
 @st.cache_data
 def load_data():
     df = pd.read_csv("merged_data.csv")
-    
+
     # Suppression des colonnes en double (_x et _y)
     df = df.loc[:, ~df.columns.duplicated()]  # Supprime les doublons de colonnes
     df.columns = [col.replace('_x', '') for col in df.columns]  # Nettoyage des noms
@@ -33,8 +33,9 @@ def load_data():
         df = df.drop(columns=["first_session_timestamp_y"])
         df = df.rename(columns={"first_session_timestamp_x": "first_session_timestamp"})
 
-    # ✅ Correction du format de `yyyymmdd`
-    df["yyyymmdd"] = pd.to_numeric(df["yyyymmdd"], errors="coerce").fillna(0).astype(int)
+    # ✅ Vérification et conversion de `yyyymmdd`
+    if "yyyymmdd" in df.columns:
+        df["yyyymmdd"] = pd.to_numeric(df["yyyymmdd"], errors="coerce").fillna(0).astype(int)
 
     # Remplacement des valeurs manquantes
     df.fillna({"user_email": "Inconnu", "medium": "Non défini", "source_id": 0}, inplace=True)
@@ -48,9 +49,14 @@ df = load_data()
 # ==============================
 st.sidebar.header("🔍 Filtres Interactifs")
 
-# ✅ Correction du slider avec `yyyymmdd` en entier
-min_date = int(df["yyyymmdd"].min())
-max_date = int(df["yyyymmdd"].max())
+# ✅ Vérification si `yyyymmdd` est bien dans le DataFrame
+if "yyyymmdd" in df.columns and not df["yyyymmdd"].isnull().all():
+    min_date = int(df["yyyymmdd"].min())
+    max_date = int(df["yyyymmdd"].max())
+else:
+    st.sidebar.warning("⚠️ La colonne 'yyyymmdd' n'est pas valide, utilisation de valeurs par défaut.")
+    min_date = 20230101
+    max_date = 20231231
 
 date_filter = st.sidebar.slider(
     "📅 Sélectionner une période :", 
