@@ -18,7 +18,7 @@ st.markdown("Visualisation interactive des données de visiteurs, sessions et ac
 # ==============================
 @st.cache_data
 def load_data():
-    df = pd.read_csv("merged_visitor_data.csv")
+    df = pd.read_csv("merged_data.csv")
     
     # Suppression des colonnes en double (_x et _y)
     df = df.loc[:, ~df.columns.duplicated()]  # Supprime les doublons de colonnes
