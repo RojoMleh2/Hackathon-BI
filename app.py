@@ -29,8 +29,8 @@ filtered_df = df[(df["timestamp"].dt.date >= start_date) & (df["timestamp"].dt.d
 # 🔗 Sélection des canaux d’acquisition
 medium_selected = st.sidebar.multiselect("🛒 Canal d'acquisition", df["medium"].unique(), default=df["medium"].unique())
 
-# 🔗 Sélection des sources
-source_selected = st.sidebar.multiselect("🔗 Source", df["source_id"].unique(), default=df["source_id"].unique())
+# 🔗 Sélection des sources (affichage des noms des sources)
+source_selected = st.sidebar.multiselect("🔗 Source", df["source_name"].unique(), default=df["source_name"].unique())
 
 # 👥 Type de visiteur
 visitor_type = st.sidebar.radio("👥 Type de visiteur", ["Tous", "Nouveau", "Récurrent"])
@@ -38,7 +38,7 @@ visitor_type = st.sidebar.radio("👥 Type de visiteur", ["Tous", "Nouveau", "R�
 # Appliquer les autres filtres
 filtered_df = filtered_df[
     (filtered_df["medium"].isin(medium_selected)) &
-    (filtered_df["source_id"].isin(source_selected))
+    (filtered_df["source_name"].isin(source_selected))
 ]
 
 if visitor_type == "Nouveau":
